@@ -1,0 +1,98 @@
+const locations = JSON.parse(localStorage.getItem("waypoints")) || [];
+let currentIndex = 0;
+let looping = false;
+
+// Create UI elements
+document.body.innerHTML += `
+    <div id="waypointUI" style="position: fixed; top: 10px; left: 10px; background: rgba(0, 0, 0, 0.8); padding: 10px; border-radius: 5px; color: white;">
+        <button id="addCurrentBtn">Add Current Location</button>
+        <button id="startLoopBtn">Start</button>
+        <button id="stopLoopBtn">Stop</button>
+        <button id="skipBtn">Skip Waypoint</button>
+        <div id="waypointList" style="margin-top: 10px;"></div>
+    </div>`;
+
+// Function to update UI
+function updateWaypointList() {
+    const listContainer = document.getElementById("waypointList");
+    listContainer.innerHTML = locations.map((loc, index) => 
+        `<div>${index + 1}: (${loc.x}, ${loc.y})</div>`
+    ).join("");
+}
+
+// Function to add a new waypoint
+function addWaypoint(x, y) {
+    locations.push({ x, y });
+    localStorage.setItem("waypoints", JSON.stringify(locations));
+    updateWaypointList();
+}
+
+// Function to get current location and store it
+function addCurrentLocation() {
+    fetch("game://getData")
+        .then(response => response.json())
+        .then(data => {
+            if (data.pos_x && data.pos_y) {
+                addWaypoint(data.pos_x, data.pos_y);
+            }
+        });
+}
+
+// Function to set waypoint in-game
+function setWaypoint(x, y) {
+    fetch("game://sendCommand", {
+        method: "POST",
+        body: JSON.stringify({ type: "setWaypoint", x, y })
+    });
+}
+
+// Function to check if player has reached the waypoint
+function checkArrival() {
+    fetch("game://getData")
+        .then(response => response.json())
+        .then(data => {
+            let { pos_x, pos_y } = data;
+            let { x, y } = locations[currentIndex];
+            let distance = Math.sqrt(Math.pow(pos_x - x, 2) + Math.pow(pos_y - y, 2));
+            if (distance < 10) { 
+                nextWaypoint();
+            } else {
+                setTimeout(checkArrival, 2000);
+            }
+        });
+}
+
+// Function to move to the next waypoint
+function nextWaypoint() {
+    if (locations.length === 0) return;
+    currentIndex = (currentIndex + 1) % locations.length;
+    let { x, y } = locations[currentIndex];
+    setWaypoint(x, y);
+    checkArrival();
+}
+
+// Function to manually skip to the next waypoint
+function skipWaypoint() {
+    nextWaypoint();
+}
+
+// Function to start cycling through waypoints
+function startLoop() {
+    if (looping || locations.length === 0) return;
+    looping = true;
+    nextWaypoint();
+}
+
+// Function to stop looping waypoints
+function stopLoop() {
+    looping = false;
+}
+
+// Attach event listeners
+document.getElementById("addCurrentBtn").addEventListener("click", addCurrentLocation);
+document.getElementById("startLoopBtn").addEventListener("click", startLoop);
+document.getElementById("stopLoopBtn").addEventListener("click", stopLoop);
+document.getElementById("skipBtn").addEventListener("click", skipWaypoint);
+
+// Initialize UI
+updateWaypointList();
