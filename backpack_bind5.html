@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Tycoon UserApp - Backpack Trigger</title>
+</head>
+<body>
+  <h1>Tycoon UserApp Trigger: Open Backpack (new)</h1>
+  <p>This UserApp registers a trigger to open the backpack menu.</p>
+
+  <script>
+    // Register the "Open Backpack (new)" trigger
+    window.parent.postMessage({
+      type: 'registerTrigger',
+      trigger: 'open_backpack',
+      name: 'New Open Backpack'
+      }, "*");
+
+    window.addEventListener("message", (event) => {
+      const evt = event.data;
+      for (const key in evt.data)
+        {
+          if (key == "trigger_open_backpack") {
+            window.parent.postMessage({
+              type: 'openMainMenu',
+            }, '*');
+            setTimeout(() => {
+              window.parent.postMessage({
+                type: "forceMenuChoice",
+                choice: "Open Backpack",
+                mod: 0
+              }, "*");
+            }, 300);
+          }
+          else {
+            console.log("Unknown event: " + key);
+          }
+        }
+    }
+);
+  </script>
+</body>
+</html>
