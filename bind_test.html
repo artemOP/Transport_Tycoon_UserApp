@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>artemOP UserApps - Trigger Test</title>
+</head>
+<body>
+  <!---- 
+  <h1>Tycoon UserApp Trigger: Open Backpack (new)</h1>
+  <p>This UserApp registers a trigger to open the backpack menu.</p>
+  --->
+  <script>
+    // Register the "Open Backpack (new)" trigger
+    window.parent.postMessage({
+      type: 'registerTrigger',
+      trigger: 'open_backpack',
+      name: 'Open Backpack (new)'
+      }, "*");
+  </script>
+</body>
+</html>
