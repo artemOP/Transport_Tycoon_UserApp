@@ -17,15 +17,15 @@
         action: function () {
           // Send message to open the root menu
           window.parent.postMessage({
-            type: 'command',
-            args: ['ui_menu_open']
+            type: 'openMainMenu',
           }, '*');
 
           // Wait a moment for the menu to open, then send command to select "Open Backpack"
           setTimeout(() => {
             window.parent.postMessage({
-              type: 'command',
-              args: ['ui_menu_select', 'Open Backpack']
+              type: 'forceMenuChoice',
+              choice = "Open Backpack"
+              mod = 0
             }, '*');
           }, 300); // Adjust delay if necessary based on menu animation timing
         }
