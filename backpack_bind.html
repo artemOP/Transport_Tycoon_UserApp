@@ -1,1 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Tycoon UserApp - Backpack Trigger</title>
+</head>
+<body>
+  <h1>Tycoon UserApp Trigger: Open Backpack (new)</h1>
+  <p>This UserApp registers a trigger to open the backpack menu.</p>
 
+  <script>
+    // Register the "Open Backpack (new)" trigger
+    window.parent.postMessage({
+      type: 'registerTrigger',
+      args: {
+        name: 'Open Backpack (new)',
+        action: function () {
+          // Send message to open the root menu
+          window.parent.postMessage({
+            type: 'command',
+            args: ['ui_menu_open']
+          }, '*');
+
+          // Wait a moment for the menu to open, then send command to select "Open Backpack"
+          setTimeout(() => {
+            window.parent.postMessage({
+              type: 'command',
+              args: ['ui_menu_select', 'Open Backpack']
+            }, '*');
+          }, 300); // Adjust delay if necessary based on menu animation timing
+        }
+      }
+    }, '*');
+  </script>
+</body>
+</html>
