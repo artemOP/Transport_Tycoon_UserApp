@@ -12,8 +12,9 @@
     // Register the "Open Backpack (new)" trigger
     window.parent.postMessage({
       type: 'registerTrigger',
-      name: 'Open Backpack (new)',
-      trigger: "open_backpack"}, "*");
+      trigger: 'open_backpack',
+      name: 'New Open Backpack'
+      }, "*");
 
     window.addEventListener("message", (event) => {
       const evt = event.data;
