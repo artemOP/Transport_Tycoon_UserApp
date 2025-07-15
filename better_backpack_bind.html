@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>artemOP UserApps - Backpack Trigger</title>
+  </head>
+  <body>
+    <script>
+      window.parent.postMessage(
+        {
+          type: "registerTrigger",
+          trigger: "open_backpack",
+          name: "Open Backpack (new)",
+        }, "*");
+
+      let pendingBackpackOpen = false;
+      let init_load = false;
+
+      window.addEventListener("message", (event) => {
+        const evt = event.data;
+
+        if (evt?.data?.menu == "backpack") {
+          clearInterval(forceMenuInterval);
+          console.log("[Backpack] Menu is open, ignoring trigger.");
+          return;
+        }
+        if (evt?.data?.menu == "Main menu" && pendingBackpackOpen) {
+          console.log("[Backpack] Main menu opened, sending forceMenuChoice.");
+          window.parent.postMessage(
+            {
+              type: "forceMenuChoice",
+              choice: "Open Backpack",
+              mod: 0,
+            }, "*");
+          pendingBackpackOpen = false;
+          return;
+        }
+
+        if (evt?.data?.trigger_open_backpack) {
+          if (!init_load) {
+            console.log("[Backpack] Initial load detected, ignoring trigger.");
+            init_load = true;
+            return;
+          }
+          if (pendingBackpackOpen) {
+            console.log("[Backpack] Trigger already pending, ignoring duplicate.");
+            return;
+          }
+          window.parent.postMessage(
+            {
+              type: "openMainMenu",
+            }, "*");
+          pendingBackpackOpen = true;
+
+          console.log("[Backpack] Trigger received");
+        }
+      });
+    </script>
+  </body>
+</html>
