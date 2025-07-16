@@ -18,6 +18,11 @@
 
       window.addEventListener("message", (event) => {
         const evt = event.data;
+        
+        if (evt?.data?.foo) {
+          console.log("Ignoring getData trigger");
+          return;
+        }
 
         if (evt?.data?.menu == "backpack") {
           clearInterval(forceMenuInterval);
@@ -53,6 +58,7 @@
           pendingBackpackOpen = true;
 
           console.log("[Backpack] Trigger received");
+          console.debug(evt.data)
         }
       });
     </script>
