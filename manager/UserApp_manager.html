@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User App Manager</title>
+    <link rel="stylesheet" href="static/UserApp_manager.css">
+</head>
+<body>
+    <div id="main-content">
+    </div>
+
+    <div id="sidebar" class="sidebar">
+        <div id="sidebar-toggle" class="sidebar-toggle">
+            <span class="toggle-icon">◀</span>
+        </div>
+        
+        <div class="sidebar-content">
+            <div class="sidebar-header">
+                <h2>App Manager</h2>
+                <button id="settings-btn" class="settings-btn" title="Settings">
+                    <span class="settings-icon">⚙️</span>
+                </button>
+            </div>
+            
+            <div id="settings-panel" class="settings-panel hidden">
+                <h4>Settings</h4>
+                <div class="setting-group">
+                    <label for="font-size-select">Font Size:</label>
+                    <select id="font-size-select" class="setting-select">
+                        <option value="small">Small</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="large">Large</option>
+                    </select>
+                </div>
+                <div class="setting-group">
+                    <label class="setting-checkbox">
+                        <input type="checkbox" id="compact-mode-toggle">
+                        <span>Compact Mode</span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="url-input-section">
+                <input type="url" id="url-input" placeholder="Enter web app URL..." class="url-input">
+                <div class="button-group">
+                    <button id="load-btn" class="btn btn-primary">Load</button>
+                    <button id="delete-btn" class="btn btn-danger">Delete</button>
+                </div>
+            </div>
+            
+            <div class="app-list-section">
+                <h3>Loaded Apps</h3>
+                <div id="app-list" class="app-list">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="iframe-container">
+    </div>
+
+    <script src="static/UserApp_manager.js"></script>
+</body>
+</html>
