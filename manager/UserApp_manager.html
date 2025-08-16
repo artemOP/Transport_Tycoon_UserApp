@@ -39,6 +39,22 @@
                         <span>Compact Mode</span>
                     </label>
                 </div>
+                <div class="setting-group">
+                    <label class="setting-checkbox">
+                        <input type="checkbox" id="hide-apps-on-startup-toggle">
+                        <span>Hide all apps on startup</span>
+                    </label>
+                </div>
+                <div class="setting-group">
+                    <label class="setting-checkbox">
+                        <input type="checkbox" id="disable-apps-on-startup-toggle">
+                        <span>Disable all apps on startup</span>
+                    </label>
+                </div>
+                <div class="setting-group">
+                    <button id="export-apps-btn" class="btn btn-primary" style="width:48%;margin-right:4px;">Export Apps</button>
+                    <button id="import-apps-btn" class="btn btn-primary" style="width:48%;">Import Apps</button>
+                </div>
             </div>
             
             <div class="url-input-section">
@@ -53,6 +69,19 @@
                 <h3>Loaded Apps</h3>
                 <div id="app-list" class="app-list">
                 </div>
+            </div>
+        </div> <!-- End sidebar-content -->
+    </div> <!-- End sidebar -->
+
+    <!-- Import/Export Modal -->
+    <div id="apps-modal" class="apps-modal hidden">
+        <div class="apps-modal-content">
+            <textarea id="apps-modal-textarea" class="apps-modal-textarea" readonly></textarea>
+            <div id="apps-modal-hint" class="apps-modal-hint"></div>
+            <div class="apps-modal-actions">
+                <button id="apps-modal-close" class="btn btn-primary">Close</button>
+                <button id="apps-modal-copy-btn" class="btn btn-primary hidden">Copy to Clipboard</button>
+                <button id="apps-modal-import-confirm" class="btn btn-primary hidden">Import</button>
             </div>
         </div>
     </div>

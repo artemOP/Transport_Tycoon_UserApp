@@ -7,13 +7,15 @@ class UserAppManager {
         this.isResizing = false;
         this.settings = {
             fontSize: 'medium',
-            compactMode: false
+            compactMode: false,
+            disableAppsOnStartup: false, // Ensure default
+            hideAppsOnStartup: false
         };
         
         this.initializeElements();
         this.bindEvents();
-        this.loadAppsFromStorage();
         this.loadSettings();
+        this.loadAppsFromStorage();
     }
 
     initializeElements() {
@@ -30,6 +32,16 @@ class UserAppManager {
         this.settingsPanel = document.getElementById('settings-panel');
         this.fontSizeSelect = document.getElementById('font-size-select');
         this.compactModeToggle = document.getElementById('compact-mode-toggle');
+        this.disableAppsOnStartupToggle = document.getElementById('disable-apps-on-startup-toggle');
+        this.hideAppsOnStartupToggle = document.getElementById('hide-apps-on-startup-toggle');
+        this.exportAppsBtn = document.getElementById('export-apps-btn');
+        this.importAppsBtn = document.getElementById('import-apps-btn');
+        this.appsModal = document.getElementById('apps-modal');
+        this.appsModalTextarea = document.getElementById('apps-modal-textarea');
+        this.appsModalHint = document.getElementById('apps-modal-hint');
+        this.appsModalClose = document.getElementById('apps-modal-close');
+        this.appsModalImportConfirm = document.getElementById('apps-modal-import-confirm');
+        this.appsModalCopyBtn = document.getElementById('apps-modal-copy-btn');
     }
 
     bindEvents() {
@@ -43,7 +55,16 @@ class UserAppManager {
             }
         });
         
-        document.addEventListener('keydown', (e) => this.handleKeyboard(e));
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (window.userAppManager && window.userAppManager.sidebar.classList.contains('open')) {
+                    window.userAppManager.toggleSidebar();
+                }
+                if (window.parent && window.parent !== window) {
+                    window.parent.postMessage({type: "pin"}, "*");
+                }
+            }
+        }, true); // Use capture to ensure Escape is always processed
         window.addEventListener('message', (event) => this.handleChildMessage(event));
         
         this.bindResizeEvents();
@@ -52,18 +73,39 @@ class UserAppManager {
 
     bindSettingsEvents() {
         this.settingsBtn.addEventListener('click', () => this.toggleSettingsPanel());
-        
         this.fontSizeSelect.addEventListener('change', (e) => {
             this.settings.fontSize = e.target.value;
             this.applySettings();
+            this.renderAppList(); // Re-render for consistency
             this.saveSettings();
         });
-        
         this.compactModeToggle.addEventListener('change', (e) => {
             this.settings.compactMode = e.target.checked;
             this.applySettings();
+            this.renderAppList(); // Re-render to apply button size changes
             this.saveSettings();
         });
+        this.disableAppsOnStartupToggle.addEventListener('change', (e) => {
+            this.settings.disableAppsOnStartup = e.target.checked;
+            this.saveSettings();
+        });
+        this.hideAppsOnStartupToggle.addEventListener('change', (e) => {
+            this.settings.hideAppsOnStartup = e.target.checked;
+            this.saveSettings();
+        });
+
+        this.exportAppsBtn.addEventListener('click', () => this.exportApps());
+
+        this.importAppsBtn.addEventListener('click', () => {
+            this.showImportModal();
+        });
+
+        this.appsModalClose.addEventListener('click', () => {
+            this.appsModal.classList.add('hidden');
+        });
+
+        this.appsModalImportConfirm.addEventListener('click', () => this.confirmImport());
+        this.appsModalCopyBtn.addEventListener('click', () => this.copyToClipboard());
     }
 
     toggleSettingsPanel() {
@@ -73,7 +115,6 @@ class UserAppManager {
     applySettings() {
         this.sidebarContent.classList.remove('font-small', 'font-medium', 'font-large');
         this.sidebarContent.classList.add(`font-${this.settings.fontSize}`);
-        
         if (this.settings.compactMode) {
             this.sidebarContent.classList.add('compact-mode');
         } else {
@@ -91,9 +132,10 @@ class UserAppManager {
             if (savedSettings) {
                 this.settings = { ...this.settings, ...JSON.parse(savedSettings) };
             }
-            
             this.fontSizeSelect.value = this.settings.fontSize;
             this.compactModeToggle.checked = this.settings.compactMode;
+            this.disableAppsOnStartupToggle.checked = !!this.settings.disableAppsOnStartup;
+            this.hideAppsOnStartupToggle.checked = !!this.settings.hideAppsOnStartup;
             this.applySettings();
         } catch (e) {
             console.error('Failed to load settings:', e);
@@ -260,6 +302,7 @@ class UserAppManager {
             id: this.nextAppId++,
             url: url,
             title: this.extractTitleFromUrl(url),
+            customTitle: '', // <-- Add customTitle property
             visible: true,
             enabled: true,
             iframe: null
@@ -502,13 +545,17 @@ class UserAppManager {
 
     renderAppList() {
         this.appList.innerHTML = '';
-        
         this.apps.forEach((app, index) => {
             const appRow = document.createElement('div');
             const isActive = app.enabled && app.visible;
             const isSelected = this.selectedAppIndices.includes(index);
             appRow.className = `app-row ${isSelected ? 'selected' : ''} ${!isActive ? 'disabled' : ''}`;
-            
+            // Use customTitle if set, else fallback to title
+            const customTitle = app.customTitle && app.customTitle.trim() ? app.customTitle : '';
+            let displayTitle = customTitle || app.title;
+
+            // Determine button size based on compact mode
+            const btnSize = this.settings.compactMode ? 16 : 32;
             appRow.innerHTML = `
                 <div class="app-row-header">
                     <div class="app-checkboxes">
@@ -523,12 +570,15 @@ class UserAppManager {
                     </div>
                     <div class="app-status ${isActive ? '' : 'inactive'}">${isActive ? 'Active' : 'Inactive'}</div>
                 </div>
-                <div class="app-title" title="${app.title}">${app.title}</div>
+                <div class="app-title" title="${displayTitle}">
+                    <span class="app-title-text">${displayTitle}</span>
+                </div>
                 <div class="app-url">${app.url}</div>
                 <div class="app-controls">
-                    <button class="control-btn move-up" ${index === 0 ? 'disabled' : ''}>↑</button>
-                    <button class="control-btn move-down" ${index === this.apps.length - 1 ? 'disabled' : ''}>↓</button>
-                    <button class="control-btn delete-app">🗑</button>
+                    <button class="control-btn move-up" ${index === 0 ? 'disabled' : ''} style="width:${btnSize}px;height:${btnSize}px;">↑</button>
+                    <button class="control-btn move-down" ${index === this.apps.length - 1 ? 'disabled' : ''} style="width:${btnSize}px;height:${btnSize}px;">↓</button>
+                    <button class="control-btn rename-btn" title="Rename" style="width:${btnSize}px;height:${btnSize}px;">✏️</button>
+                    <button class="control-btn delete-app" style="width:${btnSize}px;height:${btnSize}px;">🗑</button>
                 </div>
             `;
             
@@ -569,6 +619,57 @@ class UserAppManager {
             deleteBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.deleteApp(index);
+            });
+            
+            // Rename button logic
+            const renameBtn = appRow.querySelector('.rename-btn');
+            const appTitleText = appRow.querySelector('.app-title-text');
+            renameBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                // Replace title with input box
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.value = customTitle || app.title;
+                input.className = 'rename-input';
+                input.style.width = '100%';
+                appTitleText.replaceWith(input);
+                input.focus();
+                // Track if modifier is held
+                let modifierHeld = false;
+                input.addEventListener('keydown', (ev) => {
+                    if (ev.ctrlKey || ev.metaKey) {
+                        modifierHeld = true;
+                    } else {
+                        modifierHeld = false;
+                    }
+                    // Allow normal input keybinds
+                    if ((ev.ctrlKey || ev.metaKey) && ['a','c','v','x'].includes(ev.key.toLowerCase())) {
+                        if (ev.key.toLowerCase() === 'a') {
+                            ev.preventDefault();
+                            input.select();
+                        }
+                        return;
+                    }
+                    if (ev.key === 'Enter') {
+                        if (!modifierHeld) {
+                            input.blur();
+                        }
+                    } else if (ev.key === 'Escape') {
+                        this.renderAppList();
+                    } else {
+                        ev.stopPropagation();
+                    }
+                });
+                input.addEventListener('keyup', (ev) => {
+                    if (!ev.ctrlKey && !ev.metaKey) {
+                        modifierHeld = false;
+                    }
+                });
+                input.addEventListener('blur', () => {
+                    app.customTitle = input.value.trim();
+                    this.renderAppList();
+                    this.saveAppsToStorage();
+                });
             });
             
             this.appList.appendChild(appRow);
@@ -700,12 +801,16 @@ class UserAppManager {
             id: app.id,
             url: app.url,
             title: app.title,
+            customTitle: app.customTitle,
             visible: app.visible,
             enabled: app.enabled
         }));
         
-        localStorage.setItem('userApps', JSON.stringify(appsData));
+        const jsonString = JSON.stringify(appsData);
+        localStorage.setItem('userApps', jsonString);
         localStorage.setItem('nextAppId', this.nextAppId.toString());
+
+        console.log(`[UserAppManager] SAVED ${appsData.length} APPS:`, jsonString);
     }
 
     loadAppsFromStorage() {
@@ -713,6 +818,8 @@ class UserAppManager {
             const appsData = localStorage.getItem('userApps');
             const nextAppId = localStorage.getItem('nextAppId');
             
+            console.log(`[UserAppManager] LOADING APPS. Found data:`, appsData);
+
             // Load sidebar width
             this.loadSidebarWidth();
             
@@ -720,10 +827,18 @@ class UserAppManager {
                 const parsedApps = JSON.parse(appsData);
                 this.apps = parsedApps.map(appData => ({
                     ...appData,
-                    iframe: null
+                    iframe: null,
+                    customTitle: appData.customTitle || ''
                 }));
+                // If setting is enabled, disable all apps on startup
+                if (this.settings.disableAppsOnStartup) {
+                    this.apps.forEach(app => { app.enabled = false; });
+                }
+                // If setting is enabled, hide all apps on startup
+                if (this.settings.hideAppsOnStartup) {
+                    this.apps.forEach(app => { app.visible = false; });
+                }
                 
-                // Recreate iframes for all enabled apps (regardless of visibility)
                 this.apps.forEach(app => {
                     if (app.enabled) {
                         this.createIframe(app);
@@ -740,9 +855,102 @@ class UserAppManager {
             if (nextAppId) {
                 this.nextAppId = parseInt(nextAppId);
             }
+
+            // Re-apply settings to ensure the newly rendered list is styled correctly
+            this.applySettings();
         } catch (e) {
             console.error('Failed to load apps from storage:', e);
         }
+    }
+
+    exportApps() {
+        const exportData = {
+            apps: this.apps.map(app => ({
+                id: app.id,
+                url: app.url,
+                title: app.title,
+                customTitle: app.customTitle,
+                visible: app.visible,
+                enabled: app.enabled
+            })),
+            settings: this.settings
+        };
+        this.appsModal.classList.remove('hidden');
+        this.appsModalTextarea.value = JSON.stringify(exportData, null, 2);
+        this.appsModalTextarea.readOnly = false; // Make typable
+        this.appsModalHint.textContent = 'Copy the JSON above or edit it before copying.';
+        this.appsModalImportConfirm.classList.add('hidden');
+        this.appsModalCopyBtn.classList.remove('hidden');
+    }
+
+    showImportModal() {
+        this.appsModal.classList.remove('hidden');
+        this.appsModalTextarea.value = '';
+        this.appsModalTextarea.readOnly = false;
+        this.appsModalHint.textContent = 'Paste your exported JSON here and click Import.';
+        this.appsModalImportConfirm.classList.remove('hidden');
+        this.appsModalCopyBtn.classList.add('hidden');
+    }
+
+    confirmImport() {
+        try {
+            const importData = JSON.parse(this.appsModalTextarea.value);
+            if (importData.apps && Array.isArray(importData.apps)) {
+                let importedCount = 0;
+                let skippedCount = 0;
+
+                importData.apps.forEach(appData => {
+                    // Prevent duplicates by checking URL
+                    if (this.apps.some(existingApp => existingApp.url === appData.url)) {
+                        skippedCount++;
+                        return; // Skip this app
+                    }
+
+                    const newApp = {
+                        ...appData,
+                        id: this.nextAppId++, // Assign a new unique ID to prevent conflicts
+                        iframe: null,
+                        customTitle: appData.customTitle || ''
+                    };
+                    
+                    this.apps.push(newApp);
+                    
+                    if (newApp.enabled) {
+                        this.createIframe(newApp);
+                    }
+                    importedCount++;
+                });
+
+                if (importData.settings) {
+                    this.settings = { ...this.settings, ...importData.settings };
+                    this.loadSettings(); // Apply and save the new settings
+                }
+                this.renderAppList();
+                this.saveAppsToStorage();
+                
+                let message = `Import complete. Added ${importedCount} new app(s).`;
+                if (skippedCount > 0) {
+                    message += ` Skipped ${skippedCount} duplicate(s).`;
+                }
+                this.showNotification(message, 'success');
+                this.hideModal();
+            } else {
+                this.showNotification('Invalid import JSON.', 'error');
+            }
+        } catch (err) {
+            console.error('Failed to import apps:', err);
+            this.showNotification('Failed to import apps.', 'error');
+        }
+    }
+
+    hideModal() {
+        this.appsModal.style.display = 'none';
+    }
+
+    copyToClipboard() {
+        this.appsModalTextarea.select();
+        document.execCommand('copy');
+        this.showNotification('Copied to clipboard!', 'success');
     }
 
     handleChildMessage(event) {
